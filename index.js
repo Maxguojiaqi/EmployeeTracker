@@ -7,7 +7,7 @@ const inquirer = require("inquirer");
 require('console.table');
 
 //Bring in local module
-const DatbaseHelper = require('./DatabaseHelper')
+const DatbaseHelper = require('./js/DatabaseHelper')
 
 
 // decalre two global varibles which will be used more than one times 
@@ -132,10 +132,6 @@ async function initializeDBMenu(datbaseHelper) {
               choices: managerNames
             }])
 
-          console.log('Manager Name:' + questionAE.managerName);
-          console.log('Role Type:' + questionAE.roleType);
-          console.log(managerNameswithID);
-          console.log(allRolesWithID);
           // default manager ID to 0
           let managerID = 0
           managerNameswithID.forEach(record => {
@@ -148,8 +144,6 @@ async function initializeDBMenu(datbaseHelper) {
             // assign role ID based on the role title user picked
             if (record.title == questionAE.roleType) roleID = record.id
           });
-          console.log('Manager ID:' + managerID);
-          console.log('Role ID:' + roleID);
           // create a new employee object
           let newEmployeeObj = {
             first_name: questionAE.employeeFirstname,

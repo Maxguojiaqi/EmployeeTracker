@@ -61,7 +61,7 @@ class DatabaseHelper{
   // add a new employee to the database
   async addNewEmployee (newEmployeeObj) {
     const [results] = await this.connection.query('INSERT INTO employee SET ?', newEmployeeObj)
-    console.log(results.affectedRows + ' employee inserted!\n')
+    console.log(results.affectedRows + ' employee Inserted!\n')
   }
   // delete an existing employee from the database
   async deleteEmployee(employeeID){
