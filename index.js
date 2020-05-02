@@ -1,48 +1,60 @@
+// Index.js handles all the front-end view handling
 
-/*--------------------------------- 
-Bring in all the required modules
----------------------------------*/
+//Bring in all the required modules
+
 const mysql = require('mysql2/promise')
 const inquirer = require("inquirer");
-const cTable = require('console.table');
+require('console.table');
+
+//Bring in local module
+const DatbaseHelper = require('./DatabaseHelper')
+
 
 // decalre two global varibles which will be used more than one times 
-let connnection
+let connectionObj
 let allEmployeeInfo
 
 // call the main function which contains all the business logic
 main()
 async function main () {
   try {
-    await connect()
-    await initializeDBMenu()
+    connectionObj = await connect()
+    const datbaseHelper = new DatbaseHelper(connectionObj)
+    await initializeDBMenu(datbaseHelper)
   } catch (err) {
     console.error(err)
-  } finally {
-    connection.end()
+  }
+  finally {
+    connectionObj.end()
   }
 }
 // connect to the local database
 async function connect () {
-  connection = await mysql.createConnection({
+    let connection = await mysql.createConnection({
     host: 'localhost',
     port: 3306,
     user: 'root',
     password: 'Gjq.19901011',
     database: 'companydb'
   })
-  console.log('Connected to MySQL as id: ' + connection.threadId)
+  return connection
 }
 
 // Initialize the menu for all the operations
-async function initializeDBMenu() {
+async function initializeDBMenu(datbaseHelper) {
 
+    // welcome user
+    console.log('')
+    console.log('-------------------------------------------------------------')
+    console.log('Welcome to Employee Tracker Databse Manageement System.')
+    console.log('-------------------------------------------------------------')
+    console.log('')
     // unless specifed, keep the menu looping
     let keepLoop = true
     // depending on the table, ask more questions
     while(keepLoop)
     {
-    allEmployeeInfo = await findAllEmployee()
+    allEmployeeInfo = await datbaseHelper.findAllEmployee()
     // Ask question to the user, which DB operation one'd like to view
     let questionObj = await inquirer.prompt([{
       type: 'list', 
@@ -60,7 +72,7 @@ async function initializeDBMenu() {
 
         case 'View All Employee by Role':
           // find all the potential role types 
-          let selectionOptionsRolewithID = await findAllRoleType();
+          let selectionOptionsRolewithID = await datbaseHelper.findAllRoleType();
           let selectionOptionsRole = selectionOptionsRolewithID.map(row => row.title)
           let questionVAER = await inquirer.prompt([{
             type: 'list', 
@@ -69,14 +81,14 @@ async function initializeDBMenu() {
             choices: selectionOptionsRole
             }])
           // find all the employee based on the role types
-          let recordsVAER = await findAllEmployeeByRole(questionVAER.roleType)
+          let recordsVAER = await datbaseHelper.findAllEmployeeByRole(questionVAER.roleType)
           console.log('')
           console.table(recordsVAER)
           break;
             
         case 'View All Employee by Department':
           // find all the potential department types
-          let selectionOptionsDepartment = await findAllDepartmentType();
+          let selectionOptionsDepartment = await datbaseHelper.findAllDepartmentType();
           let questionVAED = await inquirer.prompt([{
             type: 'list', 
             message: `Please select a department type you like to view:`,
@@ -84,17 +96,17 @@ async function initializeDBMenu() {
             choices: selectionOptionsDepartment
             }])
           // find all the employee based on the department types
-          let recordsVAED = await findAllEmployeeByDepartment(questionVAED.departmentType)
+          let recordsVAED = await datbaseHelper.findAllEmployeeByDepartment(questionVAED.departmentType)
           console.log('')
           console.table(recordsVAED)
           break;
           
         case 'Add Employee':
           // find all the potential role types
-          let allRolesWithID = await findAllRoleType();
+          let allRolesWithID = await datbaseHelper.findAllRoleType();
           let allRoles = allRolesWithID.map(row => row.title)
           // find all the potential manager names
-          let managerNameswithID = await findAllManagerAndID();
+          let managerNameswithID = await datbaseHelper.findAllManagerAndID();
           let managerNames = managerNameswithID.map(row => row.managerName);
           // If no manager applicable, user will pick NONE, add this option to the selections
           managerNames.push('NONE')
@@ -146,7 +158,7 @@ async function initializeDBMenu() {
             manager_id: managerID
           }
           // add new employee to the database table
-          await addNewEmployee(newEmployeeObj)
+          await datbaseHelper.addNewEmployee(newEmployeeObj)
           break;
 
         case 'Remove Employee':
@@ -168,7 +180,7 @@ async function initializeDBMenu() {
             }])
           // find the employee's id based on the employee name user picked
           let employeeObj = allEmployeeNameswithIDRE.find((element)=>element.name == questionRE.employeeName)
-          await deleteEmployee(employeeObj.id)
+          await datbaseHelper.deleteEmployee(employeeObj.id)
           break;
 
         case 'Update Employee Role':
@@ -182,7 +194,7 @@ async function initializeDBMenu() {
             allEmployeeNameswithIDUER.push({name: fullName, id: element.ID})
           });
           // find all the role names and id
-          let allRolesWithIDUER = await findAllRoleType();
+          let allRolesWithIDUER = await datbaseHelper.findAllRoleType();
           let allRolesUER = allRolesWithIDUER.map(row => row.title)
           // let user pick a role name
           let questionUER = await inquirer.prompt([{
@@ -203,7 +215,7 @@ async function initializeDBMenu() {
           // find the role id based on the role name
           let roleObjUER = allRolesWithIDUER.find((element)=>element.title == questionUER.roleName)
           // update the employee's role
-          await updateEmployeeRole(roleObjUER.id, employeeObjUER.id)
+          await datbaseHelper.updateEmployeeRole(roleObjUER.id, employeeObjUER.id)
           break;
 
         case 'Update Employee Manager':
@@ -218,7 +230,7 @@ async function initializeDBMenu() {
           });
 
           // find all the manager names and id
-          let managerNameswithIDUEM = await findAllManagerAndID();
+          let managerNameswithIDUEM = await datbaseHelper.findAllManagerAndID();
           let managerNamesUEM = managerNameswithIDUEM.map(row => row.managerName);
           // let user pick a employee name that needs to be updated
           let questionUEM1 = await inquirer.prompt([{
@@ -247,66 +259,18 @@ async function initializeDBMenu() {
           // if there is a manager assigned, update the managerID
           if (managerObjUEM) managerIDUEM = managerObjUEM.id
           // update employee's manager
-          await updateEmployeeManager(managerIDUEM, employeeObjUEM.id)
+          await datbaseHelper.updateEmployeeManager(managerIDUEM, employeeObjUEM.id)
           break;
         // exit out the menu
         default:
+          // farewell user
+          console.log('')
+          console.log('-------------------------------------------------------------')
+          console.log('Thanks for using Employee Tracker Databse Manageement System.')
+          console.log('Good Bye!')
+          console.log('-------------------------------------------------------------')
           keepLoop = false
           break;
         }
     }
-  }
-
-// find all the employee and join them to table
-// there are 3 joins used
-async function findAllEmployee(){
-  const [rows] = await connection.query('SELECT e.id as ID, e.first_name as FirstName, e.last_name as LastName, r.title as Title, r.salary as Salary, d.name as Department, CONCAT(eManager.last_name," ",eManager.first_name) AS ManagerName FROM employee e LEFT JOIN role r on e.role_id = r.id LEFT JOIN department d on d.id = r.department_id LEFT JOIN employee eManager on eManager.id = e.manager_id')
-  return rows
-}
-// find all the exist role types and associated id
-async function findAllRoleType(){
-  const [rows] = await connection.query('SELECT title, id FROM role')
-  return rows
-}
-// find all the exist manager names and associated id
-async function findAllManagerAndID(){
-  const [rows] = await connection.query('SELECT CONCAT(first_name," ",last_name) as managerName, id FROM employee WHERE manager_id > 0')
-  return rows
-}
-// find all the employee based on their role type
-async function findAllEmployeeByRole(roleType){
-  const [rows] = await connection.query(`SELECT e.id as ID, e.first_name as FirstName, e.last_name as LastName, r.title as Title, r.salary as Salary, d.name as Department, CONCAT(eManager.last_name," ",eManager.first_name) AS ManagerName FROM employee e LEFT JOIN role r on e.role_id = r.id LEFT JOIN department d on d.id = r.department_id LEFT JOIN employee eManager on eManager.id = e.manager_id WHERE r.title = "${roleType}"`)
-  return rows
-}
-// find all the avaliable department types
-async function findAllDepartmentType(){
-  const [rows] = await connection.query('SELECT name FROM department')
-  return rows.map(row => row.name)
-}
-// find all the employee based on their department type
-async function findAllEmployeeByDepartment(departmentType){
-  const [rows] = await connection.query(`SELECT e.id as ID, e.first_name as FirstName, e.last_name as LastName, r.title as Title, r.salary as Salary, d.name as Department, CONCAT(eManager.last_name," ",eManager.first_name) AS ManagerName FROM employee e LEFT JOIN role r on e.role_id = r.id LEFT JOIN department d on d.id = r.department_id LEFT JOIN employee eManager on eManager.id = e.manager_id WHERE d.name = "${departmentType}"`)
-  return rows
-}
-// add a new employee to the database
-async function addNewEmployee (newEmployeeObj) {
-
-  const [results] = await connection.query('INSERT INTO employee SET ?', newEmployeeObj)
-  console.log(results.affectedRows + ' employee inserted!\n')
-}
-// delete an existing employee from the database
-async function deleteEmployee(employeeID){
-  const [results] = await connection.query(`DELETE FROM employee WHERE id = ${employeeID}`)
-  console.log(results.affectedRows + ' employee Deleted!\n')
-}
-// update an existing employee's role from the database
-async function updateEmployeeRole(roleID, employeeID){
-  const [results] = await connection.query(`UPDATE employee SET role_id = ${roleID} WHERE id=${employeeID}`)
-  console.log(results.affectedRows + ' employee Updated!\n')
-}
-// update an existing employee's manager from the database
-async function updateEmployeeManager(managerID, employeeID){
-  if (managerID == undefined) managerID = 0
-  const [results] = await connection.query(`UPDATE employee SET manager_id = ${managerID} WHERE id=${employeeID}`)
-  console.log(results.affectedRows + ' employee Updated!\n')
 }
