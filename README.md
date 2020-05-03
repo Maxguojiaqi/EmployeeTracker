@@ -19,6 +19,7 @@ So that I can organize and plan my business
 ## Table of Content
 
 * [Description](#Description)
+* [Demo](#Demo)
 * [Contributing](#Contributing)
 * [Reference](#Reference)
 
@@ -66,6 +67,10 @@ The command-line applicationwill allows the user to:
   * Update Employee Role
 
   * Update Employee Manager
+
+## Demo
+
+![appDemo](Assets/demo.gif)
 
 ## Contributing
 
